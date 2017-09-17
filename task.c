@@ -8,10 +8,6 @@ void f(int a, int b)
   h = a;			//h = {#, 2, g}, f_a = [-i, i], f_b = [-i, i], f_x = {3}, f_y = {1}
   if (h < y + a)	//h = {f_a, 2, g}, f_a = [-i, i], f_b = [-i, i], f_x = {3}, f_y = {1}
     {
-      if (x > 7)	//h = {f_a, 2 if f_a > 1, g if g < 1 + f_a, g}, f_a = [], f_b = [], f_x = {3}, f_y = {1}
-        {
-          x = 2;	//недостижимо
-        }
       y = 8;		//h = {f_a, 2 if f_a > 1, g in g < 1 + f_a, g}, f_a = [], f_b = [], f_x = {3}, f_y = {1}
     }
   else 				//h = {2 if f_a <= 1, g if g >= 1 + f_a, g}, f_a = [], f_b = [], f_x = {3}, f_y = {1}
@@ -30,15 +26,6 @@ void g(int a, int b)
   x = 3;			//h = {#, f}, g_a = [-int, int], g_b = [-int, int], g_x = {#}, g_y = {#}
   y = 5;			//h = {#, f}, g_a = [-int, int], g_b = [-int, int], g_x = {3}, g_y = {#}
   h = 2;			//h = {#, f}, g_a = [-int, int], g_b = [-int, int], g_x = {3}, g_y = {5}
-  if (x > 6)		//h = {2, f}, g_a = [-int, int], g_b = [-int, int], g_x = {3}, g_y = {5}
-    {
-      if (h > x - a)//недостижимо
-        {
-          h = b;	//недостижимо
-        }
-      x = 3;		//недостижимо
-      h = x - b;	//недостижимо
-    }
   x = 1;			//h = {2, f}, g_a = [-int, int], g_b = [-int, int], g_x = {3}, g_y = {5}
   while (x < 7)		//?  h = {2, f}, g_a = [-int, int], g_b = [-int, int], g_x = {1}, g_y = {5}
     {
