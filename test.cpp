@@ -9,8 +9,8 @@ using namespace std;
 
 //#define LEN 8
 //#define POW2 256
-#define LEN 27
-#define POW2 134217728
+#define LEN 36
+#define POW2 34359738368
 
 using std::set;
 
@@ -21,13 +21,14 @@ class func {
 	public:
 		int x, y, a, b, nxt;
 		vector <string> ops;
+		vector <int> nums;
 		void next_op(int&);
 	};
 
-void itoa(int n, int s[]) {
+void itoa(long long n, vector <int> & s, int len) {
 	int i;
 	char c;
-	for (i = 0; i < LEN; i++) {
+	for (i = 0; i < len; i++) {
 		s[i] = 0;
 	}
 	i = 0;
@@ -36,62 +37,60 @@ void itoa(int n, int s[]) {
 		n /= 2;
 		i++;
 	}
-	for (i = 0; i < LEN / 2; i++) {
+	for (i = 0; i < len / 2; i++) {
 		c = s[i];
-		s[i] = s[LEN - i - 1];
-		s[LEN - i - 1] = c;
+		s[i] = s[len - i - 1];
+		s[len - i - 1] = c;
 	}
 	
 }
 
-int get_state(int cf, int cg) {
-	printf("[%i %i]\n", cf, cg);
-	char st[4];
-	int i;
-	for (i = 0; i < 4; i++) {
-		st[i] = '0';
-	}
-	if (cf < 3) {
-		st[0] = '8';
-	}
-	else if (cf < 8) {
-		st[0] = '3';
-	}
-	if (cf < 4) {
-		st[1] = '8';
-	}
-	else {
-		st[1] = '1';
-	}
-	printf("%i ", atoi(st));
-	return atoi(st);
+int get_state(int cf, int cg, int h, func &F, func &G) {
+	return cf * 10000000 + cg * 100000 + h * 10000 + F.x * 1000 + F.y * 100 + G.x * 10 + G.y;
 }
 
-int process_order(int s[], set <int> states, func& F, func& G, int& h) {
-	int cf = 0, cg = 0, i, st;
+int process_order(vector <int> s, set <int> states, func& F, func& G, int& h) {
+	int cf = 0, cg = 0, i, st, len;
+	len = s.size();
 	F.x = -1;
 	F.y = -1;
-	F.nxt = 0;
+	F.nxt = F.ops.size() - 1;
 	G.x = -1;
 	G.y = -1;
-	G.nxt = 0;
-	for (i = 0; i < LEN; i++) {
+	G.nxt = G.ops.size() - 1;
+	for (i = 0; i < len; i++) {
 		//cout << "i is " << i << endl;
 		if (s[i] == 0) {
 			cf++;
-			F.next_op(h);
+			//F.next_op(h);
 		}
 		else {
 			cg++;
+			//G.next_op(h);
+		}
+		if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
+			st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
+			if (states.find(st) == states.end()) {
+				states.insert(st);
+				cout << F.nums[F.nxt] << "  " << G.nums[G.nxt] << "  " << h << " " << F.x << "  " << F.y << "  " << G.x << "  " << G.y << endl;
+			}
+			//else {
+			//	break;
+			//}
+		}
+		if (s[i] == 0) {
+			F.next_op(h);
+		}
+		else {
 			G.next_op(h);
 		}
-		cout << cf - 1 << "  " << cg - 1 << "  " << h << " " << F.x << "  " << F.y << "  " << G.x << "  " << G.y << endl;
 	}
 }
 
-int sum(int ar[]) {
+int sum(vector <int> ar) {
 	int i, s = 0;
-	for (i = 0; i < LEN; i++) {
+	int len = ar.size();
+	for (i = 0; i < len; i++) {
 		s = s + ar[i];
 	}
 	return s;
@@ -104,24 +103,24 @@ void func::next_op(int & h) {
 	if (op[1] == '=') {
 		if (op[0] == 'x') {
 			x = op[2] - '0';
-			cout << "x=" << op[2] << endl;
+			//cout << "x=" << op[2] << endl;
 		}
 		else if (op[0] == 'y') {
 			y = op[2] - '0';
-			cout << "y=" << op[2] << endl;
+			//cout << "y=" << op[2] << endl;
 		}
 		else {
 			if (op[2] == 'x') {
 				h = x;
-				cout << "h=x" << x << endl;
+				//cout << "h=x" << x << endl;
 			}
 			else if (op[2] == 'a') {
-				cout << "h=a" << endl;
+				//cout << "h=a" << endl;
 				h = a;
 			}
 			else {
 				h = op[2] - '0';
-				cout << "h=op" << endl;
+				//cout << "h=op" << endl;
 			}
 		}
 		nxt = nxt + 1;
@@ -138,15 +137,15 @@ void func::next_op(int & h) {
 			}
 			if (op[0] == 'x') {
 				cmpl = x;
-				cout << "x<";
+				//cout << "x<";
 			}
 			else {
 				cmpl = y;
-				cout << "y<";
+				//cout << "y<";
 			}
 		}
 		else {
-			cout << "h<";
+			//cout << "h<";
 			if (op[2] == 'y') {
 				cmpr = y + a;
 			}
@@ -155,7 +154,7 @@ void func::next_op(int & h) {
 			}
 			cmpl = h;
 		}
-		cout << cmpr;
+		//cout << cmpr;
 		if (cmpl >= cmpr) {
 			int ind = op.find('?');
 			nxt = op[ind + 1] - '0';
@@ -167,11 +166,18 @@ void func::next_op(int & h) {
 		else {
 			nxt = nxt + 1;
 		}
-		cout << nxt << endl;
+		//cout << nxt << endl;
 	}
 	else if (op[0] == 'g') {
 		nxt = op[2] - '0';
-		cout << "g" << nxt << endl;
+		if (op.length() > 3) {
+			nxt = nxt * 10 + op[3] - '0';
+		}
+		//cout << "g" << nxt << endl;
+	}
+	else if (op[0] == 'i') {
+		//init
+		nxt = 0;
 	}
 	else { //h > 0 ? 7 
 		if (h <= 0) {
@@ -180,15 +186,15 @@ void func::next_op(int & h) {
 		else {
 			nxt = 6;
 		}
-		cout << "h>0 " << nxt << endl;
+		//cout << "h>0 " << nxt << endl;
 	}
 }
 		
 			
 
 int main(int argc, char* argv[]) {
-	int i, j = 0;
-	int buffer[LEN];
+	long long i, j = 0;
+	
 	set <int> states;
 	func F, G;
 	int h = -1;
@@ -198,16 +204,31 @@ int main(int argc, char* argv[]) {
 	G.b = atoi(argv[4]);
 	cout << F.a << endl;
 	//F.ops = {"x=3", "y=1", "end"};
-	F.ops = {"x=3", "y=1", "h=a", "h<y+a?6", "y=8", "gt9", "x<4?8", "x=4", "x=2", "end"};
-	G.ops = {"x=3", "y=5", "h=2", "x=1", "x<7?6", "h>0?7", "end", "y<5?9", "h=x", "h<b-x?4", "x<10?12", "x=3", "y=0", "gt5"};
-	
-	//for (i = 0; i < POW2; i++) {
-	int cnst = 119279615;
-	for (i = cnst; i < cnst + 1; i++) {
-		itoa(i, buffer);
-		if (sum(buffer) == 18) {
+	F.ops = {"x=3", "y=1", "h=a", "h<y+a?6", "y=8", "gt9", "x<4?8", "x=4", "x=2", "end", "init"};
+	F.nums = {2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 1};
+	G.ops = {"x=3", "y=5", "h=2", "x=1", "x<7?14", "h>0?7", "gt14", "y<5?9", "h=x", "h<b-x?4", "x<10?12", "x=3", "y=0", "gt4", "end", "init"};
+	G.nums = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, -1, 15, 1};
+	long long max_check = POW2;
+	int len = LEN;
+	int g_len = 26;
+	if (F.a > 0) {
+		max_check = 262144;
+		len = 18; 
+		g_len = 9;
+	}
+	else if (F.a < G.b - 1) {
+		max_check = 524288;
+		len = 19;
+		g_len = 10;
+	}
+	vector <int> buffer(len);
+	for (i = 0; i < max_check; i++) {
+	//int cnst = 954236927;
+	//for (i = cnst; i < cnst + 1; i++) {
+		itoa(i, buffer, len);
+		if (sum(buffer) == g_len) {
 			cout << "\n\n" << i << " ";
-			for (int j = 0; j < LEN; j++) {
+			for (int j = 0; j < len; j++) {
 				cout << buffer[j];
 			}
 			cout << endl;
@@ -217,6 +238,5 @@ int main(int argc, char* argv[]) {
 		//j = i + 1;
 		//cout << j << endl;
 	}
-	printf("%i\n", j);
 	return 0;
 }
