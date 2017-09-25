@@ -12,8 +12,8 @@ using namespace std;
 
 //#define LEN 8
 //#define POW2 256
-#define LEN 36
-#define POW2 34359738368
+#define LEN 38
+#define POW2 34359738368 * 4
 
 using std::set;
 
@@ -133,12 +133,13 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 	len = s.size();
 	F.x = 6;
 	F.y = 6;
-	F.nxt = F.ops.size() - 1;
+	F.nxt = 11;
 	G.x = 6;
 	G.y = 6;
-	G.nxt = G.ops.size() - 1;
+	G.nxt = 16;
 	int h = 6;
 	set <int> localstates;
+	
 	for (i = 0; i < len; i++) {
 		//cout << "i is " << i << endl;
 		if (s[i] == 0) {
@@ -148,6 +149,10 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 		else {
 			cg++;
 			//G.next_op(h);
+		}
+		if (F.nums[F.nxt] == 0 || G.nums[G.nxt] == 0) {
+			cout << F.nxt << " " << F.nums[F.nxt] << " " << G.nxt << " " << G.nums[G.nxt] << endl;
+			break;
 		}
 		if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
 			st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
@@ -163,7 +168,7 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 				}
 			}
 			else {
-				break;
+				//break;
 			}
 			
 		}
@@ -290,9 +295,15 @@ void func::next_op(int & h, bool oa) {
 		//init
 		nxt = 0;
 	}
+	else if (op[0] == 'x' && op[1] == '>') {
+		nxt = nxt + 1;
+		if (oa) {
+			cout << "x>? " << endl;
+		}
+	}
 	else { //h > 0 ? 7 
 		if (h <= 0) {
-			nxt = 7;
+			nxt = 8;
 		}
 		else {
 			nxt = 6;
@@ -397,19 +408,19 @@ int main(int argc, char* argv[]) {
 	F.b = atoi(argv[2]);
 	G.a = atoi(argv[3]);
 	G.b = atoi(argv[4]);
-	F.ops = {"x=3", "y=1", "h=a", "h<y+a?6", "y=8", "gt9", "x<4?8", "x=4", "x=2", "end", "init"};
-	F.nums = {2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 1};
-	G.ops = {"x=3", "y=5", "h=2", "x=1", "x<7?14", "h>0?7", "gt14", "y<5?9", "h=x", "h<b-x?4", "x<10?12", "x=3", "y=0", "gt4", "end", "init"};
-	G.nums = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, -1, 15, 1};
+	F.ops = {"x=3", "y=1", "h=a", "h<y+a?7", "x>7?", "y=8", "gt10", "x<4?9", "x=4", "x=2", "end", "init"};
+	F.nums = {2, 3, 4, 5, 6, 7, -1, 7, 8, 9, 10, 1};
+	G.ops = {"x=3", "y=5", "h=2", "x>6?", "x=1", "x<7?15", "h>0?8", "gt14", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "init"};
+	G.nums = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, 16, 1};
 	int len = LEN;
-	int g_len = 26;
+	int g_len = 28;
 	if (F.a > 0) {
-		len = 18; 
-		g_len = 9;
+		len = 20; 
+		g_len = 10;
 	}
 	else if (F.a >= G.b - 1) {
-		len = 19;
-		g_len = 10;
+		len = 24;
+		g_len = 14;
 	}
 	if (out_all) {
 		cout << "need to check C(" << g_len << ", " << len << ")" << endl;
