@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <fstream>
+#include <cstring>
 using namespace std;
 
 //#define LEN 8
@@ -19,12 +20,13 @@ using std::set;
 using std::vector;
 using std::string;
 
+
 class func {
 	public:
 		int x, y, a, b, nxt;
 		vector <string> ops;
 		vector <int> nums;
-		void next_op(int&);
+		void next_op(int&, bool);
 	};
 
 void itoa(long long n, vector <int> & s, int len) {
@@ -48,10 +50,85 @@ void itoa(long long n, vector <int> & s, int len) {
 }
 
 int get_state(int cf, int cg, int h, func &F, func &G) {
-	return cf * 10000000 + cg * 100000 + h * 10000 + F.x * 1000 + F.y * 100 + G.x * 10 + G.y;
+	int h1 = h;
+	if (h < 0) {
+		h1 = 0;
+	}
+	return cf * 10000000 + cg * 100000 + h1 * 10000 + F.x * 1000 + F.y * 100 + G.x * 10 + G.y;
 }
 
-int process_order(vector <int> s, set <int> &states, func& F, func& G) {
+void print(ofstream& outfile, func F, func G, int h) {
+	outfile << F.nums[F.nxt] - 1 << "   " << G.nums[G.nxt] - 1 << "   ";
+	if (h == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << h << "  ";
+	}
+	if (F.x == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << F.x << "  ";
+	}
+	if (F.y == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << F.y << "  ";
+	}
+	if (G.x == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << G.x << "  ";
+	}
+	if (G.y == 6) {
+		outfile << "#";
+	}
+	else {
+		outfile << G.y;
+	}
+	outfile << endl;
+}
+
+void print(ostream& outfile, func F, func G, int h) {
+	outfile << F.nums[F.nxt] - 1 << "   " << G.nums[G.nxt] - 1 << "   ";
+	if (h == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << h << "  ";
+	}
+	if (F.x == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << F.x << "  ";
+	}
+	if (F.y == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << F.y << "  ";
+	}
+	if (G.x == 6) {
+		outfile << "#  ";
+	}
+	else {
+		outfile << G.x << "  ";
+	}
+	if (G.y == 6) {
+		outfile << "#";
+	}
+	else {
+		outfile << G.y;
+	}
+	outfile << endl;
+}
+
+
+void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream& outfile, bool oa) {
 	int cf = 0, cg = 0, i, st, len;
 	len = s.size();
 	F.x = 6;
@@ -75,27 +152,26 @@ int process_order(vector <int> s, set <int> &states, func& F, func& G) {
 		if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
 			st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
 			//
-			states.insert(st);
+			if (states.find(st) == states.end()) {
+				print(outfile, F, G, h);
+				states.insert(st);
+			}
 			if (localstates.find(st) == localstates.end()) {
 				localstates.insert(st);
-				outfile << F.nums[F.nxt] - 1 << " " << G.nums[G.nxt] - 1 << " ";
-				if (h == 6) {
-					outfile << '# ';
+				if (oa) {
+					print(cout, F, G, h);
 				}
-				else {
-					outfile << h << " ";
-				}
-				 outfile << "  " << h << " " << F.x << "  " << F.y << "  " << G.x << "  " << G.y << endl;
-				}
-			//else {
-			//	break;
-			//}
+			}
+			else {
+				break;
+			}
+			
 		}
 		if (s[i] == 0) {
-			F.next_op(h);
+			F.next_op(h, oa);
 		}
 		else {
-			G.next_op(h);
+			G.next_op(h, oa);
 		}
 	}
 }
@@ -111,29 +187,39 @@ int sum(vector <int> ar) {
 
 
 
-void func::next_op(int & h) {
+void func::next_op(int & h, bool oa) {
 	string op = ops[nxt];
 	if (op[1] == '=') {
 		if (op[0] == 'x') {
 			x = op[2] - '0';
-			cout << "x=" << op[2] << endl;
+			if (oa) {
+				cout << "x=" << op[2] << endl;
+			}
 		}
 		else if (op[0] == 'y') {
 			y = op[2] - '0';
-			cout << "y=" << op[2] << endl;
+			if (oa) {
+				cout << "y=" << op[2] << endl;
+			}
 		}
 		else {
 			if (op[2] == 'x') {
 				h = x;
-				cout << "h=x" << x << endl;
+				if (oa) {
+					cout << "h=x" << x << endl;
+				}
 			}
 			else if (op[2] == 'a') {
-				cout << "h=a" << a << endl;
+				if (oa) {
+					cout << "h=a" << a << endl;
+				}
 				h = a;
 			}
 			else {
 				h = op[2] - '0';
-				cout << "h=" << op[2] - '0' << endl;
+				if (oa) {
+					cout << "h=" << op[2] - '0' << endl;
+				}
 			}
 		}
 		nxt = nxt + 1;
@@ -150,15 +236,21 @@ void func::next_op(int & h) {
 			}
 			if (op[0] == 'x') {
 				cmpl = x;
-				cout << "x<";
+				if (oa) {
+					cout << "x<";
+				}
 			}
 			else {
 				cmpl = y;
-				cout << "y<";
+				if (oa) {
+					cout << "y<";
+				}
 			}
 		}
 		else {
-			cout << "h<";
+			if (oa) {
+				cout << "h<";
+			}
 			if (op[2] == 'y') {
 				cmpr = y + a;
 			}
@@ -167,11 +259,13 @@ void func::next_op(int & h) {
 			}
 			cmpl = h;
 		}
-		cout << cmpr;
+		if (oa) {
+			cout << cmpr << " ";
+		}
 		if (cmpl >= cmpr) {
 			int ind = op.find('?');
 			nxt = op[ind + 1] - '0';
-			if (op.length() != ind + 2) {
+			if (int(op.length()) != ind + 2) {
 				nxt *= 10;
 				nxt = nxt + op[ind + 2] - '0';
 			}
@@ -179,14 +273,18 @@ void func::next_op(int & h) {
 		else {
 			nxt = nxt + 1;
 		}
-		cout << nxt << endl;
+		if (oa) {
+			cout << nxt << endl;
+		}
 	}
 	else if (op[0] == 'g') {
 		nxt = op[2] - '0';
 		if (op.length() > 3) {
 			nxt = nxt * 10 + op[3] - '0';
 		}
-		cout << "g" << nxt << endl;
+		if (oa) {
+			cout << "gt " << nxt << endl;
+		}
 	}
 	else if (op[0] == 'i') {
 		//init
@@ -199,66 +297,144 @@ void func::next_op(int & h) {
 		else {
 			nxt = 6;
 		}
-		cout << "h>0 " << nxt << endl;
+		if (oa) {
+			cout << "h>0 " << nxt << endl;
+		}
 	}
 }			
 
+int check_in(int argc, char* argv[], string s) {
+	int i = 1;
+	while (i < argc) {
+		if (!strcmp(argv[i], s.c_str())) {
+			return i;
+		}
+		i++;
+	}
+	return 0;
+}
+
+void print_usage() {
+	cout << "Software Reliability, 1st task." << endl;
+	cout << "Usage: filename f_a f_b g_a g_b [-count] [-file filename] [-]" << endl;
+	cout << "Use -count to output number of states to stdout" << endl;
+	cout << "Use -file [filename] to output states to file" << endl;
+	cout << "Use - to output everything to stdout" << endl;
+	cout << "Ekaterina Shalimova, 420 gr., 2017" << endl;
+}
+
+int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all) {
+	int i;
+	
+	//cout << check_in(argc, argv, "asd") << endl;
+	
+	if (argc < 5) {
+		print_usage();
+		return 1;
+	}
+	else {
+		//check f_a, f_b, g_a, g_b
+		for (i = 1; i < 5; i++) {
+			int j = 0; 
+			while (argv[i][j] != '\0') {
+				if (argv[i][j] <= '0' || argv[i][j] >= '9') {
+					if (j != 0 || argv[i][j] != '-') {
+						return 1;
+					}
+					else {
+						j++;
+					}
+				}
+				else {
+					j++;
+				}
+			}
+		}
+		outname = "states.txt";
+		cnt = false;
+		out_all = false;
+		if (argc == 5) {
+			return 0;
+		}
+		else {
+			if (check_in(argc, argv, "-count") != 0) {
+				cnt = true;
+			}
+			if (check_in(argc, argv, "-out_all") != 0) {
+				out_all = true;
+			}
+			int ind = check_in(argc, argv, "-file");
+			if (ind == argc - 1) {
+				print_usage();
+				return 1;
+			}
+			if (ind != 0) {
+				outname = string(argv[ind + 1]);
+			}
+			return 0;
+		}
+	}
+	return 0;
+}
+		
+
 int main(int argc, char* argv[]) {
-	long long i, j = 0;
+	
+	bool cnt;
+	string outname = "states.txt";
+	bool out_all = false;
+	
+	if (parse_args(argc, argv, cnt, outname, out_all)) {
+		return 0;
+	}
+	
+	long long i;
 	ofstream outfile;
-	
-	
-	outfile.open("states.txt");
+	outfile.open(outname);
 	set <int> states;
 	func F, G;
-	int h = -1;
 	F.a = atoi(argv[1]);
 	F.b = atoi(argv[2]);
 	G.a = atoi(argv[3]);
 	G.b = atoi(argv[4]);
-	cout << F.a << endl;
-	//F.ops = {"x=3", "y=1", "end"};
 	F.ops = {"x=3", "y=1", "h=a", "h<y+a?6", "y=8", "gt9", "x<4?8", "x=4", "x=2", "end", "init"};
 	F.nums = {2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 1};
 	G.ops = {"x=3", "y=5", "h=2", "x=1", "x<7?14", "h>0?7", "gt14", "y<5?9", "h=x", "h<b-x?4", "x<10?12", "x=3", "y=0", "gt4", "end", "init"};
 	G.nums = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, -1, 15, 1};
-	long long max_check = POW2;
 	int len = LEN;
 	int g_len = 26;
 	if (F.a > 0) {
-		max_check = 262144;
 		len = 18; 
 		g_len = 9;
 	}
 	else if (F.a >= G.b - 1) {
-		max_check = 524288;
 		len = 19;
 		g_len = 10;
 	}
-	cout << "len is " << len << endl;
+	if (out_all) {
+		cout << "need to check C(" << g_len << ", " << len << ")" << endl;
+	}
 	vector <int> buffer(len);
 	int start = 1;
 	for (i = 0; i < g_len; i++) {
 		start *= 2;
 	}
 	itoa(start - 1, buffer, len);
-	//for (i = start - 1; i < max_check; i++) {
+	outfile << "c_f c_g h f.x f.y g.x g.y" << endl;
 	do {
-	//int cnst = 343249;
-	//for (i = cnst; i < cnst + 1; i++) {
-		//itoa(i, buffer, len);
-		//if (1 || sum(buffer) == g_len) {
-		cout << "\n\n" << i << " ";
-		for (int j = 0; j < len; j++) {
-			cout << buffer[j];
+		if (out_all) {
+			cout << "\n\n";
+			for (int j = 0; j < len; j++) {
+				cout << buffer[j];
+			}
+			cout << endl;
 		}
-		cout << endl;
-		outfile << "c_f c_g h f.x f.y g.x g.y" << endl;
-		process_order(buffer, states, F, G);
-		//j = i + 1;
-		//cout << j << endl;
+		
+		process_order(buffer, states, F, G, outfile, out_all);
 	} while (std::next_permutation(buffer.begin(), buffer.end())); 
-	cout << states.size() << endl;
+	if (cnt) {
+		cout << states.size() << endl;
+	}
 	outfile.close();
 	return 0;
 }
