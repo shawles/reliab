@@ -52,8 +52,15 @@ int get_state(int cf, int cg, int h, func &F, func &G) {
 //6 - это число для неинициализированных значений (вместо -1),
 //потому что 6 может быть равно только h и то в случае, если F.a == h == 6.
 void print(ofstream& outfile, func F, func G, int h) {
-	outfile << F.nums[F.nxt] - 1 << "   " << G.nums[G.nxt] - 1 << "   ";
-	if (h == 6) {
+	int fn = F.nums[F.nxt], gn = G.nums[G.nxt];
+	if (fn == -1) {
+		fn = F.nums[F.nxt - 1];
+	}
+	if (gn == -1) {
+		gn = G.nums[G.nxt - 1];
+	}
+	outfile << fn - 1 << "   " << gn - 1 << "   ";
+	if ((h == 6) && (F.a != 6)) {
 		outfile << "#  ";
 	}
 	else {
@@ -88,7 +95,14 @@ void print(ofstream& outfile, func F, func G, int h) {
 
 //то же самое для ostream
 void print(ostream& outfile, func F, func G, int h) {
-	outfile << F.nums[F.nxt] - 1 << "   " << G.nums[G.nxt] - 1 << "   ";
+	int fn = F.nums[F.nxt], gn = G.nums[G.nxt];
+	if (fn == -1) {
+		fn = F.nums[F.nxt - 1];
+	}
+	if (gn == -1) {
+		gn = G.nums[G.nxt - 1];
+	}
+	outfile << fn - 1 << "   " << gn - 1 << "   ";
 	if (h == 6) {
 		outfile << "#  ";
 	}
@@ -138,19 +152,13 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 	set <int> localstates;
 	//цикл по всем операторам обеих функций в порядке их выполнения
 	for (i = 0; i < len; i++) {
-		//if (s[i] == 0) {
-		//	cf++;
-		//	//F.next_op(h);
-		//}
-		//else {
-		//	cg++;
-		//	//G.next_op(h);
-		//}
 		//проверка, надо ли печатать следующее состояние 
 		//(некоторые не имеют аналогов в оригинальном коде)
-		if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
+		//if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
+		if (true) {
 			//получить представление состояния в int
 			st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
+			
 			//если такого еще не было, добавить в set и в выходной файл
 			if (states.find(st) == states.end()) {
 				print(outfile, F, G, h);
@@ -159,12 +167,15 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 			//если такого не было в этом порядке, вывести, если вообще надо печатать
 			if (localstates.find(st) == localstates.end()) {
 				localstates.insert(st);
-				if (oa) {
-					print(cout, F, G, h);
-				}
 			}
-			
+			if (oa) {
+				print(cout, F, G, h);
+			}			
 		}
+		//else {
+		//	cout << "-1: ";
+		//	print(cout, F, G, h);
+		//}
 		//выполнить очередной оператор в F или G
 		if (s[i] == 0) {
 			F.next_op(h, oa);
@@ -189,6 +200,14 @@ int sum(vector <int> ar) {
 //реализация чего-то вроде конечного автомата, моделирующего работу функций
 void func::next_op(int & h, bool oa) {
 	string op = ops[nxt];
+	if (oa) {
+		if (ops.size() == 12) {
+			cout << "f: ";
+		}
+		else {
+			cout << "g: ";
+		}
+	}
 	//оператор присваивания: определить, что и кому присваивается, 
 	//перейти к следующей команде
 	if (op[1] == '=') {
@@ -294,6 +313,9 @@ void func::next_op(int & h, bool oa) {
 	//инициализация переменных х, у
 	else if (op[0] == 'i') {
 		//init
+		if (oa) {
+			cout << "int x, y" << endl;
+		}
 		nxt = 0;
 	}
 	//операторы x > ..., это всегда False, поэтому просто переход
@@ -310,7 +332,7 @@ void func::next_op(int & h, bool oa) {
 			nxt = 8;
 		}
 		else {
-			nxt = 6;
+			nxt = 7;
 		}
 		if (oa) {
 			cout << "h>0 " << nxt << endl;
@@ -355,8 +377,9 @@ int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all
 		for (i = 1; i < 5; i++) {
 			int j = 0; 
 			while (argv[i][j] != '\0') {
-				if (argv[i][j] <= '0' || argv[i][j] >= '9') {
+				if (argv[i][j] < '0' || argv[i][j] > '9') {
 					if (j != 0 || argv[i][j] != '-') {
+						cout << "parse err" << argv[i][j] << endl;
 						return 1;
 					}
 					else {
@@ -426,9 +449,9 @@ int main(int argc, char* argv[]) {
 	G.a = atoi(argv[3]);
 	G.b = atoi(argv[4]);
 	F.ops = {"x=3", "y=1", "h=a", "h<y+a?7", "x>7?", "y=8", "gt10", "x<4?9", "x=4", "x=2", "end", "init"};
-	F.nums = {2, 3, 4, 5, 6, 7, -1, 7, 8, 9, 10, 1};
-	G.ops = {"x=3", "y=5", "h=2", "x>6?", "x=1", "x<7?15", "h>0?8", "gt14", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "init"};
-	G.nums = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, -1, 16, 1};
+	F.nums = {2,     3,      4,    5,         6,      7,     7,     8,       9,     10,     11,    1};
+	G.ops = {"x=3", "y=5", "h=2", "x>6?", "x=1", "x<7?15", "h>0?8", "gt15", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "init"};
+	G.nums = {2,     3,     4,     5,      6,     7,        8,       9,      10,      11,    12,        13,        14,    15,    5,    16,    1};
 	//длина последовательности операторов, которые надо перебирать
 	int len = LEN;
 	//количество операторов функции G
@@ -451,7 +474,7 @@ int main(int argc, char* argv[]) {
 	//следующий оператор F, 1 - G
 	vector <int> buffer(len);
 	for (i = 0; i < len; i++) {
-		if (i < g_len) {
+		if (i < (len - g_len)) {
 			buffer[i] = 0;
 		}
 		else {
