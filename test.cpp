@@ -379,7 +379,7 @@ int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all
 			while (argv[i][j] != '\0') {
 				if (argv[i][j] < '0' || argv[i][j] > '9') {
 					if (j != 0 || argv[i][j] != '-') {
-						cout << "parse err" << argv[i][j] << endl;
+						print_usage();
 						return 1;
 					}
 					else {
