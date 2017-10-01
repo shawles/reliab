@@ -149,33 +149,25 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 	G.nxt = 16;
 	int h = 6;
 	//для печати состояний каждого порядка
-	set <int> localstates;
+	//set <int> localstates;
 	//цикл по всем операторам обеих функций в порядке их выполнения
 	for (i = 0; i < len; i++) {
-		//проверка, надо ли печатать следующее состояние 
-		//(некоторые не имеют аналогов в оригинальном коде)
-		//if (F.nums[F.nxt] != -1 && G.nums[G.nxt] != -1) {
-		if (true) {
-			//получить представление состояния в int
-			st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
-			
-			//если такого еще не было, добавить в set и в выходной файл
-			if (states.find(st) == states.end()) {
-				print(outfile, F, G, h);
-				states.insert(st);
-			}
-			//если такого не было в этом порядке, вывести, если вообще надо печатать
-			if (localstates.find(st) == localstates.end()) {
-				localstates.insert(st);
-			}
-			if (oa) {
-				print(cout, F, G, h);
-			}			
+		//получить представление состояния в int
+		st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
+		
+		//если такого еще не было, добавить в set и в выходной файл
+		if (states.find(st) == states.end()) {
+			print(outfile, F, G, h);
+			states.insert(st);
 		}
-		//else {
-		//	cout << "-1: ";
-		//	print(cout, F, G, h);
+		//если такого не было в этом порядке, вывести, если вообще надо печатать
+		//if (localstates.find(st) == localstates.end()) {
+		//	localstates.insert(st);
 		//}
+		if (oa) {
+			print(cout, F, G, h);
+		}			
+		
 		//выполнить очередной оператор в F или G
 		if (s[i] == 0) {
 			F.next_op(h, oa);
@@ -249,7 +241,7 @@ void func::next_op(int & h, bool oa) {
 	else if (op[0] == 'e') { //end
 		//do nothing, nxt is the same
 	}
-	//if A < B ? C: если !(A < B), перейти к команде С, иначе к следующей
+	//A < B ? C: если !(A < B), перейти к команде С, иначе к следующей
 	else if (op[1] == '<') {
 		int cmpl, cmpr;
 		if (op[2] >= '0' && op[2] <= '9') {
@@ -412,6 +404,7 @@ int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all
 				print_usage();
 				return 1;
 			}
+			//есть какая-то строка справа от -file
 			if (ind != 0) {
 				outname = string(argv[ind + 1]);
 			}
@@ -485,6 +478,7 @@ int main(int argc, char* argv[]) {
 	//обрабатываем порядок, получаем следующую перестановку, 
 	//проверяем, не последняя ли она (есть ли еще такие)
 	do {
+		//выводим порядок, если надо
 		if (out_all) {
 			cout << "\n\n";
 			for (int j = 0; j < len; j++) {
@@ -495,7 +489,7 @@ int main(int argc, char* argv[]) {
 		process_order(buffer, states, F, G, outfile, out_all);
 	} while (std::next_permutation(buffer.begin(), buffer.end())); 
 	
-	//вывести количество состояний в stdout, если надо
+	//выводим количество состояний, если надо
 	if (cnt) {
 		cout << states.size() << endl;
 	}
