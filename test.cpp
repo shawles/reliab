@@ -136,8 +136,38 @@ void print(ostream& outfile, func F, func G, int h) {
 	outfile << endl;
 }
 
+char undef(int x) {
+	if (x == 6) {
+		return '#';
+	}
+	return x - '0';
+}
+
+void print_vertex(ofstream& outgraph, int st, func F, func G, int h) {
+	outgraph << st << " " << "[label = \"";
+	outgraph << F.nums[F.nxt] - 1 << ", " << G.nums[G.nxt] - 1 << ", ";
+	outgraph << undef(h) << ", " << undef(F.x) << ", " << undef(F.y) << ", " << undef(G.x) << ", " << undef(G.y);
+	outgraph << "\"]" << endl;
+}
+
+string edge(int lst, int st, string s, int c) {
+	string ed = std::to_string(lst) + " -> " + std::to_string(st) + " [label = \"";
+	ed = ed + s;
+	
+	ed = ed + "\" color = ";
+	if (c == 0) {
+		ed = ed + "\"green\"";
+	}
+	else {
+		ed = ed + "\"red\"";
+	}
+	ed = ed + "]\n";
+	return ed; 
+}
+
 //функция, обрабатывающая один взаимный порядок операторов, задаваемый s
-void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream& outfile, bool oa) {
+void process_order(vector <int> s, set <int> &states, func& F, func& G, 
+	ofstream& outfile, bool oa, ofstream& outgraph, set <string> &edges) {
 	int i, st, len;
 	//инициализация; про 6 объяснялось раньше
 	len = s.size();
@@ -150,15 +180,41 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 	int h = 6;
 	//для печати состояний каждого порядка
 	//set <int> localstates;
+	int last_state = -1;
+	string last_op = "";
 	//цикл по всем операторам обеих функций в порядке их выполнения
 	for (i = 0; i < len; i++) {
+		if (oa) {
+			cout << "New state:";
+		}
 		//получить представление состояния в int
 		st = get_state(F.nums[F.nxt], G.nums[G.nxt], h, F, G);
+		if (oa) {
+			cout << " " << st << " " << s[i] << F.ops[F.nxt] << " " << G.ops[G.nxt] << endl;
+		}
+		
+		if ((last_state != -1) && (last_state != st)) {
+			if (s[i] == 0) {
+				edges.insert(edge(last_state, st, last_op, s[i - 1]));
+				if (oa) {
+					cout << edge(last_state, st, last_op, s[i - 1]);
+				}
+			}
+			else {
+				edges.insert(edge(last_state, st, last_op, s[i - 1]));
+				if (oa) {
+					cout << edge(last_state, st, last_op, s[i - 1]);
+				}
+			}
+			
+		}
+		
 		
 		//если такого еще не было, добавить в set и в выходной файл
 		if (states.find(st) == states.end()) {
 			print(outfile, F, G, h);
 			states.insert(st);
+			print_vertex(outgraph, st, F, G, h);
 		}
 		//если такого не было в этом порядке, вывести, если вообще надо печатать
 		//if (localstates.find(st) == localstates.end()) {
@@ -170,11 +226,14 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G, ofstream
 		
 		//выполнить очередной оператор в F или G
 		if (s[i] == 0) {
+			last_op = F.ops[F.nxt];
 			F.next_op(h, oa);
 		}
 		else {
+			last_op = G.ops[G.nxt];
 			G.next_op(h, oa);
 		}
+		last_state = st;
 	}
 }
 
@@ -416,7 +475,6 @@ int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all
 		
 
 int main(int argc, char* argv[]) {
-	
 	//наличие или отсутствие аргумента командной строки -count
 	bool cnt;
 	//имя файла, куда сохранять состояния
@@ -424,14 +482,21 @@ int main(int argc, char* argv[]) {
 	//out_all - подробный вывод всех операций и состояний в stdout
 	bool out_all = false;
 	
+	string outgraphname = "graph.txt";
+	
 	//если parse_args вернет не 0, то что-то не то с аргументами командной строки
 	if (parse_args(argc, argv, cnt, outname, out_all)) {
 		return 0;
 	}
 	//для циклов
 	long long i;
+	//для вывода результатов
 	ofstream outfile;
 	outfile.open(outname);
+	//вершины (да и не только) графа
+	ofstream outgraph;
+	outgraph.open(outgraphname);
+	outgraph << "digraph M_1 {\n";
 	//set состояний
 	set <int> states;
 	//задание функций, их операторов, локальных a и b
@@ -446,19 +511,9 @@ int main(int argc, char* argv[]) {
 	G.ops = {"x=3", "y=5", "h=2", "x>6?", "x=1", "x<7?15", "h>0?8", "gt15", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "init"};
 	G.nums = {2,     3,     4,     5,      6,     7,        8,       9,      10,      11,    12,        13,        14,    15,    5,    16,    1};
 	//длина последовательности операторов, которые надо перебирать
-	int len = LEN;
-	//количество операторов функции G
-	int g_len = 28;
-	//если F.a > 0, то можно обойтись меньшим количеством
-	if (F.a > 0) {
-		len = 20; 
-		g_len = 10;
-	}
-	//и в этом случае тоже
-	else if (F.a >= G.b - 1) {
-		len = 22;
-		g_len = 12;
-	}
+	//теперь только для случая 1 2 3 4
+	int len = 20;
+	int g_len = 10;
 	//нужно проверить столько состояний: len! / (g_len! * (len - g_len)!)
 	if (out_all) {
 		cout << "need to check C(" << g_len << ", " << len << ")" << endl;
@@ -475,6 +530,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	outfile << "c_f c_g h f.x f.y g.x g.y" << endl;
+	set <string> edges;
 	//обрабатываем порядок, получаем следующую перестановку, 
 	//проверяем, не последняя ли она (есть ли еще такие)
 	do {
@@ -486,13 +542,19 @@ int main(int argc, char* argv[]) {
 			}
 			cout << endl;
 		}
-		process_order(buffer, states, F, G, outfile, out_all);
+		process_order(buffer, states, F, G, outfile, out_all, outgraph, edges);
 	} while (std::next_permutation(buffer.begin(), buffer.end())); 
+	
+	for (auto& ed: edges) {
+		outgraph << ed;
+	}
+	outgraph << "}";
 	
 	//выводим количество состояний, если надо
 	if (cnt) {
 		cout << states.size() << endl;
 	}
 	outfile.close();
+	outgraph.close();
 	return 0;
 }
