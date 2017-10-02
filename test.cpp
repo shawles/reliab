@@ -136,13 +136,15 @@ void print(ostream& outfile, func F, func G, int h) {
 	outfile << endl;
 }
 
+//для замены 6 на #
 char undef(int x) {
 	if (x == 6) {
 		return '#';
 	}
-	return x - '0';
+	return '0' + x;
 }
 
+//функция для получения строки, соответствующей вершине графа в формате dot
 void print_vertex(ofstream& outgraph, int st, func F, func G, int h) {
 	outgraph << st << " " << "[label = \"";
 	outgraph << F.nums[F.nxt] - 1 << ", " << G.nums[G.nxt] - 1 << ", ";
@@ -150,19 +152,42 @@ void print_vertex(ofstream& outgraph, int st, func F, func G, int h) {
 	outgraph << "\"]" << endl;
 }
 
+//функция для получения строки, соответствующей ребру графа в формате dot
 string edge(int lst, int st, string s, int c) {
 	string ed = std::to_string(lst) + " -> " + std::to_string(st) + " [label = \"";
 	ed = ed + s;
 	
 	ed = ed + "\" color = ";
 	if (c == 0) {
-		ed = ed + "\"green\"";
+		//f - фиолетовый цвет
+		ed = ed + "\"orchid4\"";
 	}
 	else {
-		ed = ed + "\"red\"";
+		//g - желтый цвет
+		ed = ed + "\"gold2\"";
 	}
 	ed = ed + "]\n";
 	return ed; 
+}
+
+//функция для замены некоторых строк во внутреннем представлении
+//на нормальное представление операторов 
+string edge_text(string s, int h) {
+	if (s == "gt15") {
+		return "break";
+	}
+	if (s == "x<4?9") {
+		return "x<4";
+	}
+	if (s == "h<y+a?7") {
+		if (h == 1) {
+			return "h<y+a";
+		}
+		else {
+			return "!(h<y+a)";
+		}
+	}
+	return s;
 }
 
 //функция, обрабатывающая один взаимный порядок операторов, задаваемый s
@@ -195,15 +220,15 @@ void process_order(vector <int> s, set <int> &states, func& F, func& G,
 		
 		if ((last_state != -1) && (last_state != st)) {
 			if (s[i] == 0) {
-				edges.insert(edge(last_state, st, last_op, s[i - 1]));
+				edges.insert(edge(last_state, st, edge_text(last_op, h), s[i - 1]));
 				if (oa) {
-					cout << edge(last_state, st, last_op, s[i - 1]);
+					cout << edge(last_state, st, edge_text(last_op, h), s[i - 1]);
 				}
 			}
 			else {
-				edges.insert(edge(last_state, st, last_op, s[i - 1]));
+				edges.insert(edge(last_state, st, edge_text(last_op, h), s[i - 1]));
 				if (oa) {
-					cout << edge(last_state, st, last_op, s[i - 1]);
+					cout << edge(last_state, st, edge_text(last_op, h), s[i - 1]);
 				}
 			}
 			
@@ -305,8 +330,10 @@ void func::next_op(int & h, bool oa) {
 		int cmpl, cmpr;
 		if (op[2] >= '0' && op[2] <= '9') {
 			cmpr = op[2] - '0';
-			if (op[3] != '?') {
-				cmpr = cmpr * 10 + op[3] - '0';
+			if (op[2] != 7) {
+				if (op[3] != '?') {
+					cmpr = cmpr * 10 + op[3] - '0';
+				}
 			}
 			if (op[0] == 'x') {
 				cmpl = x;
@@ -371,7 +398,7 @@ void func::next_op(int & h, bool oa) {
 	}
 	//операторы x > ..., это всегда False, поэтому просто переход
 	//к следующей команде
-	else if (op[0] == 'x' && op[1] == '>') {
+	else if ((op[0] == 'x' && op[1] == '>') || (op[0] == '!')) {
 		nxt = nxt + 1;
 		if (oa) {
 			cout << "x>? " << endl;
@@ -416,7 +443,7 @@ void print_usage() {
 
 //проверка аргументов командной строки на то, достаточно ли их
 //и есть ли всякие дополнительные
-int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all) {
+int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all, string& outgraphname) {
 	int i;
 	if (argc < 5) {
 		//недостаточно аргументов
@@ -467,6 +494,17 @@ int parse_args(int argc, char* argv[], bool& cnt, string& outname, bool& out_all
 			if (ind != 0) {
 				outname = string(argv[ind + 1]);
 			}
+			
+			ind = check_in(argc, argv, "-lts");
+			if (ind == argc - 1) {
+				print_usage();
+				return 1;
+			}
+			//есть какая-то строка справа от -file
+			if (ind != 0) {
+				outgraphname = string(argv[ind + 1]);
+			}
+			
 			return 0;
 		}
 	}
@@ -482,10 +520,10 @@ int main(int argc, char* argv[]) {
 	//out_all - подробный вывод всех операций и состояний в stdout
 	bool out_all = false;
 	
-	string outgraphname = "graph.txt";
+	string outgraphname = "";
 	
 	//если parse_args вернет не 0, то что-то не то с аргументами командной строки
-	if (parse_args(argc, argv, cnt, outname, out_all)) {
+	if (parse_args(argc, argv, cnt, outname, out_all, outgraphname)) {
 		return 0;
 	}
 	//для циклов
@@ -495,8 +533,11 @@ int main(int argc, char* argv[]) {
 	outfile.open(outname);
 	//вершины (да и не только) графа
 	ofstream outgraph;
-	outgraph.open(outgraphname);
-	outgraph << "digraph M_1 {\n";
+	if (outgraphname.length() != 0) {
+		
+		outgraph.open(outgraphname);
+		outgraph << "digraph M_1 {\n";
+	}
 	//set состояний
 	set <int> states;
 	//задание функций, их операторов, локальных a и b
@@ -506,10 +547,10 @@ int main(int argc, char* argv[]) {
 	F.b = atoi(argv[2]);
 	G.a = atoi(argv[3]);
 	G.b = atoi(argv[4]);
-	F.ops = {"x=3", "y=1", "h=a", "h<y+a?7", "x>7?", "y=8", "gt10", "x<4?9", "x=4", "x=2", "end", "init"};
-	F.nums = {2,     3,      4,    5,         6,      7,     7,     8,       9,     10,     11,    1};
-	G.ops = {"x=3", "y=5", "h=2", "x>6?", "x=1", "x<7?15", "h>0?8", "gt15", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "init"};
-	G.nums = {2,     3,     4,     5,      6,     7,        8,       9,      10,      11,    12,        13,        14,    15,    5,    16,    1};
+	F.ops = {"x=3", "y=1", "h=a", "h<y+a?7", "!(x>7)", "y=8", "end", "x<4?9", "x=4", "x=2", "end", "int x, y;"};
+	F.nums = {2,     3,      4,    5,         6,        7,     11,      8,       9,     10,     11,    1};
+	G.ops = {"x=3", "y=5", "h=2", "!(x>6)", "x=1", "x<7", "h>0", "gt15", "y<5?9", "h=x", "h<b-x?5", "x<10?13", "x=3", "y=0", "gt5", "end", "int x, y;"};
+	G.nums = {2,     3,     4,     5,        6,     7,     8,       9,    10,      11,    12,        13,        14,    15,    5,    16,    1};
 	//длина последовательности операторов, которые надо перебирать
 	//теперь только для случая 1 2 3 4
 	int len = 20;
@@ -555,6 +596,8 @@ int main(int argc, char* argv[]) {
 		cout << states.size() << endl;
 	}
 	outfile.close();
-	outgraph.close();
+	if (outgraphname.length() != 0) {
+		outgraph.close();
+	}
 	return 0;
 }
