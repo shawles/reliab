@@ -3,53 +3,55 @@ from math import floor
 from numpy.random import shuffle, choice
 from numpy import arange
 from lxml import etree
+import os
+from os import listdir
 
 
 n = 2
 m = 2
 times = [1, 1]
-max_gens = 100
+max_gens = 2000
 max_time = 100
-pop_size = 6
-mut_prob = 0.6
+pop_size = 50
+mut_prob = 0.2
 
-def fitness(sch):
+def fitness(sch, n, m, times):
 	cpu_times = [0 for i in range(m)]
 	for i in range(n):
 		cpu_times[sch[i] - 1] += times[i]
 	return max_time - max(cpu_times)	
 
-def mean_fitness(samples):
+def mean_fitness(samples, n):
 	mn = 0
 	for i in range(len(samples)):
 		mn += samples[i][n]
 	mn *= (1. / len(samples))
 	return mn
 
-def init_sch():
+def init_sch(n, m):
 	l = [randint(1, m) for i in range(n + 1)]
-	l[n] = fitness(l)
+	l[n] = fitness(l, n, m, times)
 	return l
 
 #for proper crossing use cross(p1, p2), then cross(p2, p1)
-def cross(p1, p2):
+def cross(p1, p2, n, m, times):
 	child = list(p1)
 	num = randint(1, n - 1)
 	child[num:] = p2[num:]
-	child[n] = fitness(child)
+	child[n] = fitness(child, n, m, times)
 	return child
 
-def mutate(sch):
+def mutate(sch, n, m, times):
 	num = randint(0, n - 1)
 	old = sch[num]
 	new = randint(1, m)
 	while (old == new):
 		new = randint(1, m)
 	sch[num] = new
-	sch[n] = fitness(sch)
+	sch[n] = fitness(sch, n, m, times)
 	return sch
 
-def check_conv(samples):
+def check_conv(samples, n):
 	last = samples[0][n]
 	i = 1
 	while (i < pop_size and samples[i][n] == last):
@@ -58,10 +60,10 @@ def check_conv(samples):
 		return False
 	return True
 
-def cross_list(samples):
+def cross_list(samples, n):
 	cl = []
 	rs = []
-	mean = mean_fitness(samples)
+	mean = mean_fitness(samples, n)
 	for i in range(pop_size):
 		ratio = samples[i][n] / mean
 		rs.append(ratio * 1. / pop_size)
@@ -92,7 +94,7 @@ def check_diff_pairs(ar):
 			return False
 	return True
 
-def cross_gen(samples, cl):
+def cross_gen(samples, cl, n, m, times):
 	lcl = len(cl)
 	new_gen = []
 	#print('cl:', cl)
@@ -109,10 +111,33 @@ def cross_gen(samples, cl):
 			ind_p2 = cl[i2]
 			#print('lcl:', len(cl), lcl)
 			#print('i:', i1, i2, cl[i1], cl[i2])
-			new_gen.append(cross(samples[ind_p1], samples[ind_p2]))
-			new_gen.append(cross(samples[ind_p2], samples[ind_p1]))
+			new_gen.append(cross(samples[ind_p1], samples[ind_p2], n, m, times))
+			new_gen.append(cross(samples[ind_p2], samples[ind_p1], n, m, times))
 			
 	return new_gen
+
+def get_best(samples, times, m):
+	
+	
+	l = len(samples[0])
+	ind = 0
+	mx = samples[0][l - 1]
+	for i in range(1, len(samples)):
+		if samples[i][l - 1] > mx:
+			mx = samples[i][l - 1]
+			ind = i
+	
+	for i in range(0, m):
+		s = 0
+		print(i + 1, ': ', sep = '', end = '')
+		for j in range(len(times)):
+			if samples[ind][j] == i + 1:
+				s += times[j]
+				print(times[j], end = ' ')
+		print(' =', s)
+		
+	
+	print(samples[ind])
 
 def to_xml(n, m, times):
 	data = etree.Element('Data')
@@ -142,48 +167,77 @@ def from_xml(st):
 	return n, m, times
 	#print(etree.tostring(data, pretty_print = True))
 
-if __name__ == '__main__':
-	print('Enter jobs number and CPUs number')
-	n, m = map(int, input().split())
-	print('Enter time for every job')
-	times = list(map(int, input().split()))
+def read_from_xml(filename):
+	f = open(filename, 'rb')
+	st = f.read()
+	return from_xml(st)
+
+def generate_xml():
+	coef = 3
+	maxtime = 10
 	
-	nm = 'tmp.xml'
-	f = open(nm, 'rb')
-	s = f.read()
-	print(from_xml(s))
-	#print(from_xml(input()))
-	exit()
-	
-	
+	for jobs in range(5, 20, 2):
+		for c1 in range(coef):
+			for cpus in range(2, 7, 2):
+				for c2 in range(coef):
+					ts = [randint(1, maxtime) for i in range(jobs)]
+					fname = 'data//' + str(jobs) + '_' + str(cpus) + '_' + str(c1) + '_' + str(c2) + '.xml';
+					write_to_xml(jobs, cpus, ts, fname)
+
+
+
+def solution(n, m, times):
+	global max_time 
 	max_time = sum(times) + 1
 
 	samples = []
 	for i in range(pop_size):
-		samples.append(init_sch())
+		samples.append(init_sch(n, m))
 
 	gens = 0
 
 	while (gens < max_gens):
-		#Размножение
 		
-		cl = cross_list(samples)
-		samples = cross_gen(samples, cl)
+		#Селекция и скрещивание
+		cl = cross_list(samples, n)
+		samples = cross_gen(samples, cl, n, m, times)
 		
 		#Мутации
 		for i in range(len(samples)):
 			u = uniform(0, 1)
 			if u < mut_prob:
-				samples[i] = mutate(samples[i])
+				samples[i] = mutate(samples[i], n, m, times)
 		
-		#Отбор
-		
-		print()
-		print(gens, 'new_gen:', samples)
 		
 		#Проверка сходимости
-		if check_conv(samples):
+		#if check_conv(samples, n):
+		if gens == max_gens - 1:
+			print()
+			print(gens, 'new_gen:', samples)
+			print('best:')
+			get_best(samples, times, m)
 			break
 		gens += 1
 
-print('\n\n', samples)
+	#print('\n\n', samples)
+	
+if __name__ == '__main__':
+	
+	
+	if not os.path.isdir('data'):
+		os.mkdir('data')
+		generate_xml()
+		exit()
+		
+	l = listdir('data')
+	for fname in l:
+		if '.xml' in fname:
+			print(fname)
+			n, m, times = read_from_xml('data//' + fname)
+			solution(n, m, times)
+			print(n, m, times, max_time)
+			print()
+			
+			
+	
+
