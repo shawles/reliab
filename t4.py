@@ -5,21 +5,38 @@ from numpy import arange
 from lxml import etree
 import os
 from os import listdir
+from matplotlib import pyplot as plt
+import csv
+import sys
+import argparse
 
 
 n = 2
 m = 2
 times = [1, 1]
-max_gens = 2000
+max_gens = 500
 max_time = 100
-pop_size = 50
-mut_prob = 0.2
+pop_size = 150
+mut_prob = 0.1
+
+
+def parse():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--f', type = str, default = 'data', 
+		help = 'folder with xml data samples')
+	parser.add_argument('--gen', type = int, default = 500, 
+		help = 'number of generations')
+	parser.add_argument('--o', type = str, default = 'res.txt', 
+		help = 'file to save csv results')	
+	args = parser.parse_args()
+	return args
 
 def fitness(sch, n, m, times):
 	cpu_times = [0 for i in range(m)]
 	for i in range(n):
 		cpu_times[sch[i] - 1] += times[i]
-	return max_time - max(cpu_times)	
+	#print(cpu_times)
+	return sum(times) - max(cpu_times)	
 
 def mean_fitness(samples, n):
 	mn = 0
@@ -120,24 +137,22 @@ def get_best(samples, times, m):
 	
 	
 	l = len(samples[0])
-	ind = 0
-	mx = samples[0][l - 1]
-	for i in range(1, len(samples)):
-		if samples[i][l - 1] > mx:
-			mx = samples[i][l - 1]
-			ind = i
+	samples.sort(key = lambda x: x[-1])
+	#лучший - последний
 	
 	for i in range(0, m):
 		s = 0
 		print(i + 1, ': ', sep = '', end = '')
 		for j in range(len(times)):
-			if samples[ind][j] == i + 1:
+			if samples[-1][j] == i + 1:
 				s += times[j]
 				print(times[j], end = ' ')
 		print(' =', s)
 		
 	
-	print(samples[ind])
+	print(samples[-1])
+	#возвращает максимальное время
+	return sum(times) - samples[-1][l - 1]
 
 def to_xml(n, m, times):
 	data = etree.Element('Data')
@@ -172,23 +187,23 @@ def read_from_xml(filename):
 	st = f.read()
 	return from_xml(st)
 
-def generate_xml():
-	coef = 3
+def generate_xml(foldef = 'data'):
+	coef = 1
 	maxtime = 10
 	
-	for jobs in range(5, 20, 2):
+	for jobs in range(5, 20, 3):
 		for c1 in range(coef):
 			for cpus in range(2, 7, 2):
 				for c2 in range(coef):
 					ts = [randint(1, maxtime) for i in range(jobs)]
-					fname = 'data//' + str(jobs) + '_' + str(cpus) + '_' + str(c1) + '_' + str(c2) + '.xml';
+					fname = folder + '//' + str(jobs) + '_' + str(cpus) + '_' + str(c1) + '_' + str(c2) + '.xml';
 					write_to_xml(jobs, cpus, ts, fname)
 
 
 
 def solution(n, m, times):
 	global max_time 
-	max_time = sum(times) + 1
+	max_time = sum(times)
 
 	samples = []
 	for i in range(pop_size):
@@ -209,35 +224,69 @@ def solution(n, m, times):
 				samples[i] = mutate(samples[i], n, m, times)
 		
 		
-		#Проверка сходимости
-		#if check_conv(samples, n):
 		if gens == max_gens - 1:
 			print()
-			print(gens, 'new_gen:', samples)
+			#print(gens, 'new_gen:', samples)
 			print('best:')
-			get_best(samples, times, m)
-			break
+			return get_best(samples, times, m)
+			#break
 		gens += 1
 
-	#print('\n\n', samples)
-	
+		#print('\n\n', samples)
+
+def less_than(filename, num = 2):
+	f = open(filename, 'r')
+	r = csv.reader(f)
+	a = 0
+	g = 0
+	for row in r:
+		if float(row[-1]) <= num:
+			g += 1
+		a += 1
+	print(g, a, g / a)
+
+def r3_less_than(filename):
+	f = open(filename, 'r')
+	r = csv.reader(f)
+	a = 0
+	g = 0
+	for row in r:
+		if float(row[-1]) < float(row[3]):
+			g += 1
+		a += 1
+	print(g, a, g / a)
+
 if __name__ == '__main__':
 	
 	
-	if not os.path.isdir('data'):
-		os.mkdir('data')
-		generate_xml()
-		exit()
+	args = parse()
+	max_gens = args.gen
+	folder = args.f
+	outfile = args.o
+	f = open(outfile, 'w')
+	wrt = csv.writer(f)
+	
+	if not os.path.isdir(folder):
+		os.mkdir(folder)
+		generate_xml(folder)
+		#exit()
 		
-	l = listdir('data')
+	l = listdir(folder)
+	rs = []
 	for fname in l:
-		if '.xml' in fname:
+		if '.xml' in fname: # and '5_2_0' in fname:
 			print(fname)
-			n, m, times = read_from_xml('data//' + fname)
-			solution(n, m, times)
-			print(n, m, times, max_time)
+			n, m, times = read_from_xml(folder + '//' + fname)
+			sol = solution(n, m, times)
+			#время выполнения расписания
+			st = sum(times)
+			#sol = st - sol
+			print(n, m, times, st, sol, st / m, sol - (st / m))
+			r = [n, m, st, min(times), max(times), "%0.2f" % (st / m), sol, "%0.2f" % (sol - st / m)]
+			rs.append(r)
+			wrt.writerow(r)
 			print()
-			
-			
+	rs.sort(key = lambda x: float(x[7]))
+	f.close()
 	
 
